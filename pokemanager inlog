@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101114"><title>PokéManager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#191b20;--panel2:#22252c;--line:#30343d;--muted:#9da3ae;--white:#f5f6f8;--accent:#8b7cff;--green:#55d6a0;--red:#ff7777}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--white);font:15px system-ui,-apple-system,Segoe UI,sans-serif}button,input{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:12px 15px;background:var(--accent);color:white;font-weight:650}button.secondary{background:var(--panel2);border:1px solid var(--line)}button.danger{background:#572d35}.wrap{max-width:900px;margin:auto;padding:22px 16px 100px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.brand span{color:var(--accent)}.muted{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:17px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.stat strong{display:block;font-size:24px;margin-top:7px}.stat small{color:var(--muted)}.tabs{position:fixed;bottom:0;left:0;right:0;background:#17191fee;border-top:1px solid var(--line);display:flex;justify-content:center;padding:9px 5px calc(9px + env(safe-area-inset-bottom));backdrop-filter:blur(16px);z-index:5}.tabs button{background:transparent;color:var(--muted);padding:8px 12px;flex:1;max-width:180px;font-size:12px}.tabs button.active{color:white;background:var(--panel2)}.tabs b{display:block;font-size:19px;margin-bottom:2px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:13px;color:var(--muted)}input{width:100%;padding:12px;border-radius:11px;background:#101216;border:1px solid var(--line);color:white}h1{font-size:25px;margin:0 0 5px}h2{font-size:18px;margin:0 0 12px}.hidden{display:none!important}.item{padding:13px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.pill{font-size:11px;color:var(--green);background:#17382e;padding:4px 8px;border-radius:20px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{padding:9px 12px;font-size:13px}.empty{text-align:center;padding:28px 8px;color:var(--muted)}.barrow{display:grid;grid-template-columns:68px 1fr 72px;gap:8px;align-items:center;margin:12px 0;font-size:12px}.barbg{height:12px;background:#292c34;border-radius:20px;overflow:hidden}.bar{height:100%;background:var(--accent);border-radius:20px}.auth{max-width:420px;margin:10vh auto;padding:22px}.note{font-size:12px;color:var(--muted);line-height:1.5}.checkrow{display:flex;align-items:center;gap:9px;padding:9px 0}.checkrow input{width:auto}
+@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.wrap{padding-top:32px}}
+</style></head>
+<body>
+<div id="auth" class="auth panel">
+ <div class="brand">Poké<span>Manager</span></div><p class="muted">Log in om je kaarten en verkopen te beheren.</p>
+ <div class="field"><label>E-mailadres</label><input id="email" type="email" autocomplete="email" placeholder="jij@example.com"></div>
+ <div class="field"><label>Wachtwoord</label><input id="password" type="password" autocomplete="current-password" placeholder="Minimaal 6 tekens"></div>
+ <div class="actions"><button id="login">Inloggen</button><button class="secondary" id="signup">Account maken</button></div>
+ <p id="authmsg" class="note"></p>
+</div>
+<div id="app" class="hidden">
+ <main class="wrap">
+  <header class="top"><div><div class="brand">Poké<span>Manager</span></div><div class="muted" id="welcome">Jouw Pokémon-voorraad</div></div><button class="secondary" id="logout">Uitloggen</button></header>
+  <section id="home">
+   <h1>Dashboard</h1><p class="muted">Overzicht van je Pokémon-verkopen</p>
+   <div class="grid">
+    <div class="stat"><small>Totale omzet</small><strong id="revenue">€0,00</strong></div>
+    <div class="stat"><small>Totale winst</small><strong id="profit">€0,00</strong></div>
+    <div class="stat"><small>Verkopen</small><strong id="salescount">0</strong></div>
+    <div class="stat"><small>Voorraad</small><strong id="stockcount">0</strong></div>
+   </div>
+   <div class="panel"><h2>Recente verkopen</h2><div id="recent" class="empty">Nog geen verkopen.</div></div>
+  </section>
+  <section id="inventory" class="hidden">
+   <div class="row"><div><h1>Voorraad</h1><p class="muted">Beheer je kaarten</p></div><button id="showadd">+ Kaart</button></div>
+   <div id="addform" class="panel hidden"><h2>Kaart toevoegen</h2>
+    <div class="field"><label>Naam kaart</label><input id="cardname" placeholder="Bijv. Charizard ex"></div>
+    <div class="field"><label>Inkoopprijs (€)</label><input id="buyprice" type="number" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="field"><label>Vraagprijs (€) – optioneel</label><input id="askprice" type="number" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="actions"><button id="savecard">Opslaan</button><button class="secondary" id="canceladd">Annuleren</button></div>
+   </div>
+   <div class="panel"><div class="row"><h2>Beschikbare kaarten</h2><span class="pill" id="stockpill">0 kaarten</span></div><div id="cardslist" class="empty">Je voorraad is leeg.</div></div>
+  </section>
+  <section id="selling" class="hidden">
+   <h1>Verkopen</h1><p class="muted">Verkoop één of meerdere kaarten samen.</p>
+   <div class="panel"><h2>Selecteer kaarten</h2><div id="selllist" class="empty">Geen kaarten in voorraad.</div>
+    <div class="field"><label>Totale verkoopprijs voor deze selectie (€)</label><input id="sellprice" type="number" min="0" step="0.01" placeholder="Bijv. 25,50"></div>
+    <button id="completesale">Verkoop registreren</button><p class="note">Verzendkosten worden niet meegenomen. De verkoopdatum wordt automatisch opgeslagen.</p>
+   </div>
+  </section>
+  <section id="stats" class="hidden">
+   <h1>Statistieken</h1><p class="muted">Omzet en winst per maand</p>
+   <div class="grid"><div class="stat"><small>Totale omzet</small><strong id="statsrevenue">€0,00</strong></div><div class="stat"><small>Totale winst</small><strong id="statsprofit">€0,00</strong></div></div>
+   <div class="panel"><h2>Winst per maand</h2><div id="chart" class="empty">Nog geen verkoopgegevens.</div></div>
+  </section>
+ </main>
+ <nav class="tabs">
+  <button class="active" data-tab="home"><b>⌂</b>Home</button><button data-tab="inventory"><b>▤</b>Voorraad</button><button data-tab="selling"><b>＋</b>Verkopen</button><button data-tab="stats"><b>▥</b>Statistieken</button>
+ </nav>
+</div>
+<script>
+const SUPABASE_URL='https://jbkwwucnxbjzcoleekne.supabase.co/rest/v1/;
+const SUPABASE_ANON_KEY='sb_publishable_ ';
+let db=null, cards=[], sales=[], items=[];
+const $=id=>document.getElementById(id), euro=n=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(Number(n||0));
+function message(id,s){$(id).textContent=s}
+function moneyInput(id){const v=$(id).value.trim().replace(',','.');return v===''?null:Number(v)}
+async function init(){
+ if(!window.supabase){message('authmsg','De databasebibliotheek kon niet laden. Controleer je internetverbinding.');return}
+ if(SUPABASE_URL.startsWith('VUL_')||SUPABASE_ANON_KEY.startsWith('VUL_')){message('authmsg','De Supabase-gegevens moeten nog worden ingevuld voordat je kunt inloggen.');return}
+ db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+ const {data:{session}}=await db.auth.getSession(); if(session)showApp();
+ db.auth.onAuthStateChange((_e,s)=>{if(s)showApp();else{$('app').classList.add('hidden');$('auth').classList.remove('hidden')}});
+}
+async function auth(action){
+ const email=$('email').value.trim(),password=$('password').value;
+ if(!email||!password){message('authmsg','Vul je e-mailadres en wachtwoord in.');return}
+ const {error}=action==='signup'?await db.auth.signUp({email,password}):await db.auth.signInWithPassword({email,password});
+ message('authmsg',error?error.message:(action==='signup'?'Account aangemaakt. Controleer eventueel je e-mail om je account te bevestigen.':'Inloggen...'));
+}
+$('login').onclick=()=>auth('login');$('signup').onclick=()=>auth('signup');
+$('logout').onclick=async()=>db.auth.signOut();
+async function showApp(){$('auth').classList.add('hidden');$('app').classList.remove('hidden');await refresh()}
+async function refresh(){
+ const [c,s,i]=await Promise.all([db.from('cards').select('*').order('created_at',{ascending:false}),db.from('sales').select('*').order('sold_at',{ascending:false}),db.from('sale_items').select('*')]);
+ if(c.error||s.error||i.error){alert('Databasefout: '+(c.error||s.error||i.error).message);return}
+ cards=c.data||[];sales=s.data||[];items=i.data||[];render();
+}
+function soldIds(){return new Set(items.map(x=>x.card_id))}
+function totals(){let rev=sales.reduce((a,x)=>a+Number(x.total_sale_price),0),cost=items.reduce((a,x)=>a+Number(x.purchase_price_at_sale),0);return {rev,profit:rev-cost}}
+function render(){
+ const sold=soldIds(),stock=cards.filter(c=>!sold.has(c.id)),t=totals();
+ $('revenue').textContent=euro(t.rev);$('profit').textContent=euro(t.profit);$('salescount').textContent=sales.length;$('stockcount').textContent=stock.length;
+ $('statsrevenue').textContent=euro(t.rev);$('statsprofit').textContent=euro(t.profit);$('stockpill').textContent=stock.length+' kaarten';
+ $('cardslist').innerHTML=stock.length?stock.map(c=>`<div class="item row"><div><b>${esc(c.name)}</b><div class="muted">Inkoop ${euro(c.purchase_price)} · Vraag ${c.asking_price==null?'—':euro(c.asking_price)}</div></div><button class="danger" onclick="removeCard('${c.id}')">Verwijder</button></div>`).join():'Je voorraad is leeg.';
+ $('selllist').innerHTML=stock.length?stock.map(c=>`<label class="checkrow"><input type="checkbox" value="${c.id}" class="sellcheck"><span>${esc(c.name)} <span class="muted">(${euro(c.purchase_price)})</span></span></label>`).join():'Geen kaarten in voorraad.';
+ $('recent').innerHTML=sales.length?sales.slice(0,5).map(s=>{let n=items.filter(i=>i.sale_id===s.id).length;return `<div class="item row"><span>${new Date(s.sold_at).toLocaleDateString('nl-NL')} · ${n} kaart(en)</span><b>${euro(s.total_sale_price)}</b></div>`}).join():'Nog geen verkopen.';
+ drawChart();
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+window.removeCard=async id=>{if(!confirm('Deze kaart verwijderen?'))return;const {error}=await db.from('cards').delete().eq('id',id);if(error)alert(error.message);else refresh()}
+$('showadd').onclick=()=>$('addform').classList.remove('hidden');$('canceladd').onclick=()=>$('addform').classList.add('hidden');
+$('savecard').onclick=async()=>{let name=$('cardname').value.trim(),buy=moneyInput('buyprice'),ask=moneyInput('askprice');if(!name||buy===null||!Number.isFinite(buy)||buy<0||(ask!==null&&(!Number.isFinite(ask)||ask<0))){alert('Vul een kaartnaam en geldige prijzen in.');return}const {error}=await db.from('cards').insert({name,purchase_price:buy,asking_price:ask});if(error)alert(error.message);else{$('cardname').value=$('buyprice').value=$('askprice').value='';$('addform').classList.add('hidden');await refresh()}};
+$('completesale').onclick=async()=>{let ids=[...document.querySelectorAll('.sellcheck:checked')].map(x=>x.value),price=moneyInput('sellprice');if(!ids.length||price===null||!Number.isFinite(price)||price<0){alert('Selecteer minstens één kaart en vul een geldige verkoopprijs in.');return}
+ const selected=cards.filter(c=>ids.includes(c.id));const {data:sale,error}=await db.from('sales').insert({total_sale_price:price}).select().single();if(error){alert(error.message);return}
+ const rows=selected.map(c=>({sale_id:sale.id,card_id:c.id,purchase_price_at_sale:Number(c.purchase_price)}));
+ const {error:e}=await db.from('sale_items').insert(rows);if(e){await db.from('sales').delete().eq('id',sale.id);alert(e.message);return}
+ $('sellprice').value='';await refresh();alert('Verkoop opgeslagen!');
+};
+function drawChart(){
+ const map={};sales.forEach(s=>{let d=new Date(s.sold_at),k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');map[k]??={rev:0,cost:0};map[k].rev+=Number(s.total_sale_price)});
+ items.forEach(i=>{let s=sales.find(x=>x.id===i.sale_id);if(s){let d=new Date(s.sold_at),k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');map[k]??={rev:0,cost:0};map[k].cost+=Number(i.purchase_price_at_sale)}});
+ const keys=Object.keys(map).sort().slice(-6);if(!keys.length){$('chart').textContent='Nog geen verkoopgegevens.';return}
+ let max=Math.max(1,...keys.map(k=>Math.abs(map[k].rev-map[k].cost)));
+ $('chart').innerHTML=keys.map(k=>{let v=map[k].rev-map[k].cost,month=new Date(k+'-01T12:00:00').toLocaleDateString('nl-NL',{month:'short',year:'2-digit'}),w=Math.max(2,Math.abs(v)/max*100);return `<div class="barrow"><span>${month}</span><div class="barbg"><div class="bar" style="width:${w}%"></div></div><b>${euro(v)}</b></div>`}).join('');
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['home','inventory','selling','stats'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='selling')render()});
+init();
+</script></body></html>
